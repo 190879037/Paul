@@ -2,39 +2,38 @@
 
 Windows display & font tuner with bilingual UI (中文 / English).
 
-Adjust monitor brightness / contrast (DDC/CI), gamma ramp, ClearType, and brand-inspired presets (Apple, LG, Huawei, ASUS, Generic).
+## Install (another PC)
 
-## Install
+1. Download **ClearyDisplay-Setup-*.exe** from [Releases](https://github.com/stormertoolscn/ClearyDisplay/releases).
+2. If Windows shows **SmartScreen** (“Windows protected your PC”):
+   - Click **More info** → **Run anyway**  
+   - Or right‑click the file → **Properties** → check **Unblock** → OK, then run again.
+3. Install finishes to `%LOCALAPPDATA%\ClearyDisplay` (no admin required).
 
-Download the latest **Setup** installer from [Releases](../../releases).
+### Requirements
 
-- Installs to `%LOCALAPPDATA%\ClearyDisplay` (no admin required)
-- Optional desktop shortcut
-- Optional “apply profile at logon”
+- Windows 10 / 11 (desktop / laptop with GUI)
+- .NET Framework 4.x (usually already installed)
+- Optional: monitor that supports **DDC/CI** for hardware brightness/contrast (otherwise gamma still works)
 
-## Run from source
+## Portable
 
-```powershell
-# Build EXE (requires ps2exe module)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-Release.ps1
-```
-
-Or open the GUI directly:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\src\GammaTuner.ps1
-```
+You can also run `ClearyDisplay.exe` without the installer (same SmartScreen note).
 
 ## Features
 
 - Brightness / contrast via DDC/CI where supported
-- Software gamma & scale (per session)
-- ClearType smoothing controls + system wizard
-- Brand recommendation chips with side panel details
-- Power profiles (AC / battery)
-- Named user presets
-- Light / Dark / System UI theme
-- ZH ↔ EN language toggle
+- Software gamma & scale
+- ClearType controls + system wizard
+- Brand presets: Apple, LG, Huawei, ASUS, Generic
+- AC / battery profiles, named presets
+- Light / Dark / System theme, ZH ↔ EN toggle
+
+## Build from source
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-Release.ps1
+```
 
 ## License
 

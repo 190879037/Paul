@@ -1,2 +1,4 @@
 @echo off
-powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%LOCALAPPDATA%\ClearyDisplay\ApplyProfile.ps1" -Force -Brightness 90
+REM Use script directory (works wherever ClearyDisplay is installed)
+set "APPDIR=%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%APPDIR%ApplyProfile.ps1" -Force

@@ -1,6 +1,6 @@
-; ClearyDisplay 鈥?Inno Setup installer
+; ClearyDisplay - Inno Setup installer (ASCII-safe; avoid codepage issues)
 #define MyAppName "ClearyDisplay"
-#define MyAppVersion "1.6.0"
+#define MyAppVersion "1.6.1"
 #define MyAppPublisher "ClearyDisplay"
 #define MyAppURL "https://github.com/stormertoolscn/ClearyDisplay"
 #define MyAppExeName "ClearyDisplay.exe"
@@ -25,11 +25,16 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
-ArchitecturesInstallIn64BitMode=x64compatible
-VersionInfoVersion=1.6.0.0
+MinVersion=10.0
+ArchitecturesAllowed=x86 x64compatible arm64
+ArchitecturesInstallIn64BitMode=x64compatible arm64
+VersionInfoVersion=1.6.1.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Display and font tuner (ZH/EN)
 VersionInfoProductName={#MyAppName}
+DisableWelcomePage=no
+CloseApplications=yes
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -37,7 +42,7 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.i
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startup"; Description: "Start / apply profile at Windows logon (寮€鏈哄簲鐢ㄦ樉绀洪厤缃?"; GroupDescription: "Startup / 寮€鏈?; Flags: unchecked
+Name: "startup"; Description: "Apply display profile at Windows logon"; GroupDescription: "Startup options:"; Flags: unchecked
 
 [Files]
 Source: "..\dist\ClearyDisplay.exe"; DestDir: "{app}"; Flags: ignoreversion

@@ -1,9 +1,29 @@
 ﻿# ClearyDisplay 云母白中文调节器 - 显示 + 字体 + 预设
 #Requires -Version 5.1
-Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml, System.Windows.Forms
+try {
+  Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml, System.Windows.Forms
+} catch {
+  Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+  [System.Windows.Forms.MessageBox]::Show(
+    "Failed to load WPF libraries.`nThis app needs a full Windows desktop (Win10/11) with .NET Framework.`n`n" + $_.Exception.Message,
+    'ClearyDisplay')
+  exit 1
+}
 
 $ErrorActionPreference = 'Continue'
+
+# Install / EXE directory (ps2exe has no reliable $PSScriptRoot)
+$script:appDir = $null
+try {
+  $mod = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+  if ($mod -and (Test-Path $mod)) { $script:appDir = Split-Path $mod -Parent }
+} catch {}
+if (-not $script:appDir -and $PSScriptRoot) { $script:appDir = $PSScriptRoot }
+if (-not $script:appDir) { $script:appDir = Join-Path $env:LOCALAPPDATA 'ClearyDisplay' }
+
+# User config always under LocalAppData (stable across reinstall / move)
 $baseDir = Join-Path $env:LOCALAPPDATA 'ClearyDisplay'
+try { New-Item -ItemType Directory -Force -Path $baseDir | Out-Null } catch {}
 $profilePath = Join-Path $baseDir 'dim-profile.json'
 $presetsPath = Join-Path $baseDir 'presets.json'
 $uiSettingsPath = Join-Path $baseDir 'ui-settings.json'
@@ -1483,10 +1503,16 @@ $reader = New-Object System.Xml.XmlNodeReader $xaml
 $window = [Windows.Markup.XamlReader]::Load($reader)
 if (-not $window) { throw 'XAML 加载失败，窗口为空' }
 
-# 窗口标题栏 / 任务栏图标
+# 窗口标题栏 / 任务栏图标（优先安装目录，其次配置目录）
 try {
-  $iconPath = Join-Path $baseDir 'ClearyDisplay.ico'
-  if (Test-Path $iconPath) {
+  $iconPath = $null
+  foreach ($cand in @(
+    (Join-Path $script:appDir 'ClearyDisplay.ico'),
+    (Join-Path $baseDir 'ClearyDisplay.ico')
+  )) {
+    if ($cand -and (Test-Path $cand)) { $iconPath = $cand; break }
+  }
+  if ($iconPath) {
     $window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create(
       [Uri]::new($iconPath),
       [System.Windows.Media.Imaging.BitmapCreateOptions]::None,
@@ -2012,9 +2038,17 @@ $window.Add_Closed({
   try { if ($script:deferTimer) { $script:deferTimer.Stop() } } catch {}
 })
 
+# Startup error surface (helps diagnose other PCs)
 try {
-  if (-not $window) { throw '窗口对象为空，XAML 未能加载' }
+  if (-not $window) { throw 'Window object is null (XAML failed to load)' }
   [void]$window.ShowDialog()
 } catch {
-  [System.Windows.MessageBox]::Show(((T 'startFail') + $_.Exception.Message + "`n`n" + $_.ScriptStackTrace), (T 'appTitle'))
+  $msg = (T 'startFail') + $_.Exception.Message + "`n`n" + $_.ScriptStackTrace
+  try {
+    [System.Windows.MessageBox]::Show($msg, (T 'appTitle'))
+  } catch {
+    # Fallback if WPF MessageBox unavailable
+    Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+    [System.Windows.Forms.MessageBox]::Show($msg, 'ClearyDisplay')
+  }
 }
