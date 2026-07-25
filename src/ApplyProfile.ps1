@@ -238,8 +238,7 @@ try {
   $gWant = [int][Math]::Round($fontGamma * 1000)
   if ($gWant -lt 1000) { $gWant = 1000 }
   if ($gWant -gt 2200) { $gWant = 2200 }
-  $g = [uint32]$gWant
-  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGGAMMA, 0, [ref]$g, $flags)
+  # Skip SPI_SETFONTSMOOTHINGGAMMA — P/Invoke corrupts live contrast on Win11 and breaks Java.
   $o = [uint32]$fontOri
   [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGORIENTATION, 0, [ref]$o, $flags)
   Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothing -Value ($(if($fontClear){'2'}else{'0'}))

@@ -315,12 +315,14 @@ function Set-FontSmoothingSettings([bool]$enableClearType, [double]$gamma, [int]
   if ($g -lt 1000) { $g = 1000 }
   if ($g -gt 2200) { $g = 2200 }
   $gammaWant = [int]$g
-  [void][ClearyNative]::SystemParametersInfo([ClearyNative]::SPI_SETFONTSMOOTHINGGAMMA, 0, [ref]$g, $flags)
+  # IMPORTANT: Do NOT call SPI_SETFONTSMOOTHINGGAMMA/CONTRAST via P/Invoke on Win11.
+  # On this host it leaves a corrupt live contrast value (billions) that crashes every
+  # Java Swing app: "IllegalArgumentException: … incompatible with Text-specific LCD contrast key".
+  # Registry persistence + SPI font-smoothing toggle is enough for ClearType after relaunch/reboot.
   $o = [uint32]$orientation
   [void][ClearyNative]::SystemParametersInfo([ClearyNative]::SPI_SETFONTSMOOTHINGORIENTATION, 0, [ref]$o, $flags)
   Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothing -Value ($(if($enableClearType){'2'}else{'0'}))
   Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingType -Value ($(if($enableClearType){2}else{1})) -Type DWord
-  # Persist intended value (SPI may mutate the ref buffer on some hosts)
   Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingGamma -Value $gammaWant -Type DWord
   Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingOrientation -Value $orientation -Type DWord
   if (-not $script:uiSettings) { $script:uiSettings = @{} }
