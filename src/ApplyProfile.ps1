@@ -1,10 +1,11 @@
-﻿# ClearyDisplay - apply AC/Battery profile to ALL attached displays
+﻿# ClearyDisplay - apply AC/Battery profile + font to ALL attached displays (logon / power change)
 param([switch]$Force)
 
 $ErrorActionPreference = 'SilentlyContinue'
 $logDir = Join-Path $env:LOCALAPPDATA 'ClearyDisplay'
 $logFile = Join-Path $logDir 'apply.log'
 $profilePath = Join-Path $logDir 'dim-profile.json'
+$uiSettingsPath = Join-Path $logDir 'ui-settings.json'
 
 function Write-Log([string]$msg) {
   $line = '{0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $msg
@@ -12,12 +13,63 @@ function Write-Log([string]$msg) {
 }
 
 function Get-IsOnAc {
-  $b = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
-  if (-not $b) { return $true }
-  return ([int]$b.BatteryStatus -eq 2)
+  # ACLineStatus: 0=Offline, 1=Online, 255=Unknown
+  # Win32_Battery.BatteryStatus=2 是 Unknown，不是接电
+  try {
+    if (-not ('ClearyPower' -as [type])) {
+      Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class ClearyPower {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct SYSTEM_POWER_STATUS {
+    public byte ACLineStatus;
+    public byte BatteryFlag;
+    public byte BatteryLifePercent;
+    public byte SystemStatusFlag;
+    public int BatteryLifeTime;
+    public int BatteryFullLifeTime;
+  }
+  [DllImport("kernel32.dll")]
+  public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS sps);
+}
+"@
+    }
+    $sps = New-Object ClearyPower+SYSTEM_POWER_STATUS
+    if ([ClearyPower]::GetSystemPowerStatus([ref]$sps)) {
+      if ($sps.ACLineStatus -eq 1) { return $true }
+      if ($sps.ACLineStatus -eq 0) { return $false }
+    }
+  } catch {}
+  $bats = @(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue)
+  if ($bats.Count -eq 0) { return $true }
+  foreach ($bat in $bats) {
+    $s = [int]$bat.BatteryStatus
+    if ($s -in 3, 6, 7, 8, 9) { return $true }
+  }
+  return $false
+}
+
+function Get-FontFromRecommend([string]$id) {
+  switch ($id) {
+    'apple'   { return @{ clearType = $true; gamma = 1.15; orientation = 1 } }
+    'lg'      { return @{ clearType = $true; gamma = 1.68; orientation = 1 } }
+    'huawei'  { return @{ clearType = $true; gamma = 1.55; orientation = 1 } }
+    'asus'    { return @{ clearType = $true; gamma = 1.40; orientation = 1 } }
+    'samsung' { return @{ clearType = $true; gamma = 1.50; orientation = 1 } }
+    default   { return @{ clearType = $true; gamma = 1.40; orientation = 1 } }
+  }
 }
 
 if (-not $Force) { Start-Sleep -Seconds 2 }
+
+# 调节窗口打开时不要抢写硬件：否则插电瞬间亮度跳变，且易与 UI 线程 DDC 打架导致假死
+try {
+  if (Get-Process -Name 'ClearyDisplay' -ErrorAction SilentlyContinue) {
+    Write-Log 'Skipped: ClearyDisplay UI is open (no hardware write on power change)'
+    exit 0
+  }
+} catch {}
 
 $onAc = Get-IsOnAc
 $brightness = 90
@@ -56,6 +108,8 @@ public class ClearyDisplayApply {
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool GetMonitorBrightness(IntPtr h, ref uint min, ref uint cur, ref uint max);
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool DestroyPhysicalMonitors(uint n, [In] PHYSICAL_MONITOR[] arr);
   [DllImport("user32.dll")] public static extern bool EnumDisplayMonitors(IntPtr a, IntPtr b, MonitorEnumProc c, IntPtr d);
+  [DllImport("user32.dll", SetLastError=true)] public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref uint pvParam, uint fWinIni);
+  [DllImport("user32.dll", SetLastError=true)] public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
   public delegate bool MonitorEnumProc(IntPtr h, IntPtr hdc, IntPtr r, IntPtr data);
   [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)]
   public struct PHYSICAL_MONITOR {
@@ -78,6 +132,12 @@ public class ClearyDisplayApply {
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst=128)] public string DeviceKey;
   }
   public const int DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1;
+  public const uint SPI_SETFONTSMOOTHING = 0x004B;
+  public const uint SPI_SETFONTSMOOTHINGTYPE = 0x200B;
+  public const uint SPI_SETFONTSMOOTHINGGAMMA = 0x200D;
+  public const uint SPI_SETFONTSMOOTHINGORIENTATION = 0x2013;
+  public const uint SPIF_UPDATEINIFILE = 0x01;
+  public const uint SPIF_SENDCHANGE = 0x02;
 }
 "@
 }
@@ -148,5 +208,47 @@ try {
   powercfg /SETACTIVE SCHEME_CURRENT | Out-Null
 } catch {}
 
-Write-Log ("Applied ALL displays onAc={0} bright={1} contrast={2} readback={3} gamma={4} scale={5} gammaDevs={6} ddc={7}" -f $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount)
+# Restore ClearType / font gamma (registry usually persists; SPI refresh helps after logon)
+$fontClear = $true
+$fontGamma = 1.4
+$fontOri = 1
+try {
+  if (Test-Path $uiSettingsPath) {
+    $ui = Get-Content $uiSettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($ui.fontApplied) {
+      if ($null -ne $ui.fontApplied.clearType) { $fontClear = [bool]$ui.fontApplied.clearType }
+      if ($null -ne $ui.fontApplied.gamma) { $fontGamma = [double]$ui.fontApplied.gamma }
+      if ($null -ne $ui.fontApplied.orientation) { $fontOri = [int]$ui.fontApplied.orientation }
+    } elseif ($ui.fontRecommend) {
+      $ff = Get-FontFromRecommend ([string]$ui.fontRecommend)
+      $fontClear = [bool]$ff.clearType
+      $fontGamma = [double]$ff.gamma
+      $fontOri = [int]$ff.orientation
+    }
+  }
+} catch {}
+try {
+  $flags = [ClearyDisplayApply]::SPIF_UPDATEINIFILE -bor [ClearyDisplayApply]::SPIF_SENDCHANGE
+  $smooth = if ($fontClear) { [uint32]1 } else { [uint32]0 }
+  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHING, $smooth, [IntPtr]::Zero, $flags)
+  if ($fontClear) {
+    $type = [uint32]2
+    [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGTYPE, 0, [ref]$type, $flags)
+  }
+  $gWant = [int][Math]::Round($fontGamma * 1000)
+  if ($gWant -lt 1000) { $gWant = 1000 }
+  if ($gWant -gt 2200) { $gWant = 2200 }
+  $g = [uint32]$gWant
+  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGGAMMA, 0, [ref]$g, $flags)
+  $o = [uint32]$fontOri
+  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGORIENTATION, 0, [ref]$o, $flags)
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothing -Value ($(if($fontClear){'2'}else{'0'}))
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingType -Value ($(if($fontClear){2}else{1})) -Type DWord
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingGamma -Value $gWant -Type DWord
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingOrientation -Value $fontOri -Type DWord
+} catch {
+  Write-Log ('Font apply fail: ' + $_.Exception.Message)
+}
+
+Write-Log ("Applied ALL displays onAc={0} bright={1} contrast={2} readback={3} gamma={4} scale={5} gammaDevs={6} ddc={7} fontG={8}" -f $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount, $fontGamma)
 exit 0
