@@ -1462,22 +1462,22 @@ $script:loading = $true
     </Style>
     <Style x:Key="PageTitle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="24"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="15"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style x:Key="FieldTitle" TargetType="TextBlock">
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style TargetType="TabItem">
       <Setter Property="Padding" Value="18,10"/>
       <Setter Property="FontSize" Value="14"/>
-      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
       <Setter Property="Template">
         <Setter.Value>
@@ -1492,7 +1492,7 @@ $script:loading = $true
               <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                 <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontWeight" Value="Normal"/>
               </Trigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Bd" Property="Background" Value="#180078D4"/>
@@ -1599,7 +1599,7 @@ $script:loading = $true
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="16,8"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Template">
         <Setter.Value>
@@ -1617,7 +1617,7 @@ $script:loading = $true
     <Style x:Key="GhostBtn" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}">
       <Setter Property="Background" Value="{DynamicResource GhostBg}"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Normal"/>
     </Style>
     <Style TargetType="ComboBoxItem">
       <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -1753,39 +1753,39 @@ $script:loading = $true
                   ToolTip="切换到 English">
             <StackPanel Orientation="Horizontal">
               <Grid Width="18" Height="16" Margin="0,0,6,0" VerticalAlignment="Center">
-                <TextBlock Text="文" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                <TextBlock Text="文" FontSize="10" FontWeight="Normal" Foreground="{DynamicResource Accent}"
                            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,-1,0,0"/>
-                <TextBlock Text="A" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                <TextBlock Text="A" FontSize="10" FontWeight="Normal" Foreground="{DynamicResource Accent}"
                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,-1"/>
               </Grid>
-              <TextBlock x:Name="TxtLangCode" Text="中" FontSize="13" FontWeight="Bold"
+              <TextBlock x:Name="TxtLangCode" Text="中" FontSize="13" FontWeight="Normal"
                          Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
             </StackPanel>
           </Border>
           <StackPanel x:Name="BdRecBar" Orientation="Horizontal" VerticalAlignment="Center">
             <Border x:Name="BdRecApple" Background="{DynamicResource GhostBg}" CornerRadius="20" Padding="14,8" Margin="0,0,8,0" Cursor="Hand"
                     ToolTip="显示·苹果">
-              <TextBlock x:Name="TxtRecApple" Text="苹果" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecApple" Text="苹果" Foreground="{DynamicResource TextSecondary}" FontWeight="Normal"/>
             </Border>
             <Border x:Name="BdRecLg" Background="{DynamicResource GhostBg}" CornerRadius="20" Padding="14,8" Margin="0,0,8,0" Cursor="Hand"
                     ToolTip="显示·LG">
-              <TextBlock x:Name="TxtRecLg" Text="LG" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecLg" Text="LG" Foreground="{DynamicResource TextSecondary}" FontWeight="Normal"/>
             </Border>
             <Border x:Name="BdRecHuawei" Background="{DynamicResource GhostBg}" CornerRadius="20" Padding="14,8" Margin="0,0,8,0" Cursor="Hand"
                     ToolTip="显示·华为">
-              <TextBlock x:Name="TxtRecHuawei" Text="华为" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecHuawei" Text="华为" Foreground="{DynamicResource TextSecondary}" FontWeight="Normal"/>
             </Border>
             <Border x:Name="BdRecAsus" Background="{DynamicResource GhostBg}" CornerRadius="20" Padding="14,8" Margin="0,0,8,0" Cursor="Hand"
                     ToolTip="显示·华硕">
-              <TextBlock x:Name="TxtRecAsus" Text="华硕" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecAsus" Text="华硕" Foreground="{DynamicResource TextSecondary}" FontWeight="Normal"/>
             </Border>
             <Border x:Name="BdRecSamsung" Background="{DynamicResource GhostBg}" CornerRadius="20" Padding="14,8" Margin="0,0,8,0" Cursor="Hand"
                     ToolTip="显示·三星">
-              <TextBlock x:Name="TxtRecSamsung" Text="三星" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecSamsung" Text="三星" Foreground="{DynamicResource TextSecondary}" FontWeight="Normal"/>
             </Border>
             <Border x:Name="BdRecGeneric" Background="{DynamicResource AccentSoft}" CornerRadius="20" Padding="14,8" Cursor="Hand"
                     ToolTip="显示·通用">
-              <TextBlock x:Name="TxtRecGeneric" Text="通用显示" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+              <TextBlock x:Name="TxtRecGeneric" Text="通用显示" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
             </Border>
           </StackPanel>
         </StackPanel>
@@ -1861,7 +1861,7 @@ $script:loading = $true
                 <StackPanel>
                   <Grid>
                     <TextBlock x:Name="TxtBrightLabel" Text="亮度" Style="{StaticResource FieldTitle}"/>
-                    <TextBlock x:Name="TxtBright" Text="90" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="TxtBright" Text="90" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
                   </Grid>
                   <Slider x:Name="SlBright" Minimum="0" Maximum="100" Value="90"
                           SmallChange="1" LargeChange="5"/>
@@ -1871,7 +1871,7 @@ $script:loading = $true
                 <StackPanel>
                   <Grid>
                     <TextBlock x:Name="TxtContrastLabel" Text="对比度" Style="{StaticResource FieldTitle}"/>
-                    <TextBlock x:Name="TxtContrast" Text="50" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="TxtContrast" Text="50" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
                   </Grid>
                   <Slider x:Name="SlContrast" Minimum="0" Maximum="100" Value="50"
                           SmallChange="1" LargeChange="5"/>
@@ -1890,7 +1890,7 @@ $script:loading = $true
                 <StackPanel>
                   <Grid>
                     <TextBlock x:Name="TxtGammaLabel" Text="伽马幂次" Style="{StaticResource FieldTitle}"/>
-                    <TextBlock x:Name="TxtGamma" Text="1.00" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="TxtGamma" Text="1.00" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
                   </Grid>
                   <TextBlock x:Name="TxtGammaHint" Text="大于 1 更暗，小于 1 更亮" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,2,0,0"/>
                   <Slider x:Name="SlGamma" Minimum="0.70" Maximum="1.50" Value="1.0"
@@ -1901,7 +1901,7 @@ $script:loading = $true
                 <StackPanel>
                   <Grid>
                     <TextBlock x:Name="TxtScaleLabel" Text="整体缩放" Style="{StaticResource FieldTitle}"/>
-                    <TextBlock x:Name="TxtScale" Text="1.00" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="TxtScale" Text="1.00" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
                   </Grid>
                   <TextBlock x:Name="TxtScaleHint" Text="整体明暗倍率，可细调" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,2,0,0"/>
                   <Slider x:Name="SlScale" Minimum="0.70" Maximum="1.10" Value="1.0"
@@ -1939,7 +1939,7 @@ $script:loading = $true
                   <Ellipse Width="3.5" Height="3.5" Fill="{DynamicResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"/>
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                  <TextBlock x:Name="TxtColorCalibName" Text="显示颜色校准" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="TxtColorCalibName" Text="显示颜色校准" FontSize="14" FontWeight="Normal" Foreground="{DynamicResource TextPrimary}"/>
                   <TextBlock x:Name="TxtColorCalibDesc" Text="校准显示颜色、亮度和对比度" FontSize="12" Foreground="{DynamicResource TextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
                 <Button x:Name="BtnColorCalib" Grid.Column="2" Style="{StaticResource GhostBtn}" Content="校准显示器"
@@ -1958,7 +1958,7 @@ $script:loading = $true
               <StackPanel>
                 <TextBlock x:Name="TxtFontRecSection" Text="当前字体档（用顶部胶囊切换）" Style="{StaticResource SectionTitle}"/>
                 <TextBlock x:Name="TxtFontRecDesc" Text="顶部品牌胶囊在「字体」页只改 ClearType；在「显示」页只改屏幕。两套选择互不影响。" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,12"/>
-                <TextBlock x:Name="TxtFontRecTitle" Text="字体档 · 通用显示" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="TxtFontRecTitle" Text="字体档 · 通用显示" Foreground="{DynamicResource Accent}" FontWeight="Normal" Margin="0,0,0,4"/>
                 <TextBlock x:Name="TxtFontRecTarget" Text="Windows 默认字体平滑" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,4"/>
                 <TextBlock x:Name="TxtFontRecParams" Text="字体：—" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap"/>
               </StackPanel>
@@ -1971,7 +1971,7 @@ $script:loading = $true
                 <CheckBox x:Name="ChkClearType" Content="启用 ClearType" IsChecked="True" Margin="0,0,0,12"/>
                 <Grid>
                   <TextBlock x:Name="TxtFontGammaLabel" Text="字体平滑伽马" Style="{StaticResource FieldTitle}"/>
-                  <TextBlock x:Name="TxtFontGamma" Text="1.40" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"/>
+                  <TextBlock x:Name="TxtFontGamma" Text="1.40" HorizontalAlignment="Right" Foreground="{DynamicResource Accent}" FontWeight="Normal"/>
                 </Grid>
                 <TextBlock x:Name="TxtFontGammaHint" Text="通常 1.0～2.2。数值越高，文字边缘对比越强。" Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
                 <Slider x:Name="SlFontGamma" Minimum="1.0" Maximum="2.2" Value="1.4"
@@ -1994,7 +1994,7 @@ $script:loading = $true
                 <TextBlock x:Name="TxtPreviewDesc" Text="下面文字用于观察边缘是否舒服（宋体/雅黑混排）。" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,10"/>
                 <Border Background="{DynamicResource InputBg}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="12" Padding="16">
                   <StackPanel>
-                    <TextBlock x:Name="TxtPreviewSample" FontSize="22" FontWeight="SemiBold" Text="屏幕与字体调节 ClearyDisplay"/>
+                    <TextBlock x:Name="TxtPreviewSample" FontSize="22" FontWeight="Normal" Text="屏幕与字体调节 ClearyDisplay"/>
                     <TextBlock FontSize="15" Margin="0,10,0,0" Text="The quick brown fox jumps over the lazy dog. 0123456789"/>
                     <TextBlock x:Name="TxtPreviewZh" FontSize="14" Margin="0,10,0,0" TextWrapping="Wrap" LineHeight="22"
                                Text="中文预览：清屏、亮度、对比度、伽马。字体渲染是否清晰细腻，一眼可辨。"/>
@@ -2024,10 +2024,10 @@ $script:loading = $true
                       <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border Width="40" Height="40" CornerRadius="20" Background="#F7F7F8" BorderBrush="#E6E6E8" BorderThickness="1" Margin="0,0,14,0">
-                      <TextBlock x:Name="TxtThemeLightShort" Text="浅" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#0F0F0F"/>
+                      <TextBlock x:Name="TxtThemeLightShort" Text="浅" FontSize="16" FontWeight="Normal" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#0F0F0F"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeLightName" Text="浅色" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeLightName" Text="浅色" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeLightDesc" Text="高对比清爽白底" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeLightMark" Grid.Column="2" Text="✓" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2043,10 +2043,10 @@ $script:loading = $true
                       <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border Width="40" Height="40" CornerRadius="20" Background="#2C2C2E" BorderBrush="#3A3A3C" BorderThickness="1" Margin="0,0,14,0">
-                      <TextBlock x:Name="TxtThemeDarkShort" Text="深" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#F2F2F7"/>
+                      <TextBlock x:Name="TxtThemeDarkShort" Text="深" FontSize="16" FontWeight="Normal" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#F2F2F7"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeDarkName" Text="深色" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeDarkName" Text="深色" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeDarkDesc" Text="深色界面，夜间更护眼" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeDarkMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2077,7 +2077,7 @@ $script:loading = $true
                       </Grid>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeGithubName" Text="GITHUB" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeGithubName" Text="GITHUB" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeGithubDesc" Text="GitHub 风：灰白底 + 蓝字 + 绿滑条" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeGithubMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2103,7 +2103,7 @@ $script:loading = $true
                       </Grid>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeAppleName" Text="苹果风格" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeAppleName" Text="苹果风格" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeAppleDesc" Text="Apple 风：浅灰底 + 圆角描边胶囊" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeAppleMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2134,7 +2134,7 @@ $script:loading = $true
                       </Grid>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeDsaName" Text="DSA" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeDsaName" Text="DSA" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeDsaDesc" Text="DSA 风：浅蓝底、粉彩蓝字、薄荷绿辅色" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeDsaMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2165,7 +2165,7 @@ $script:loading = $true
                       </Grid>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeChromeName" Text="Chrome" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeChromeName" Text="Chrome" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeChromeDesc" Text="Chrome 风：白 / 蓝 / 红" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeChromeMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
@@ -2181,10 +2181,10 @@ $script:loading = $true
                       <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border Width="40" Height="40" CornerRadius="20" Background="#EEF3FF" BorderBrush="#2B6DEF" BorderThickness="1" Margin="0,0,14,0">
-                      <TextBlock x:Name="TxtThemeSysShort" Text="自" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Accent}"/>
+                      <TextBlock x:Name="TxtThemeSysShort" Text="自" FontSize="16" FontWeight="Normal" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Accent}"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="TxtThemeSysName" Text="跟随系统" FontSize="15" FontWeight="SemiBold"/>
+                      <TextBlock x:Name="TxtThemeSysName" Text="跟随系统" FontSize="15" FontWeight="Normal"/>
                       <TextBlock x:Name="TxtThemeSysDesc" Text="自动跟随 Windows「深色 / 浅色」模式" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <TextBlock x:Name="TxtThemeSystemMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
