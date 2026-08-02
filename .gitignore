@@ -1,0 +1,9 @@
+dist/*.exe
+dist/*.zip
+!dist/.gitkeep
+*.log
+ui-settings.json
+dim-profile.json
+presets.json
+.DS_Store
+Thumbs.db
