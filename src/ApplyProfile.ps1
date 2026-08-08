@@ -1,10 +1,11 @@
-﻿# ClearyDisplay - apply AC/Battery profile to ALL attached displays
+﻿# ClearyDisplay - apply AC/Battery profile + font to ALL attached displays (logon / power change)
 param([switch]$Force)
 
 $ErrorActionPreference = 'SilentlyContinue'
 $logDir = Join-Path $env:LOCALAPPDATA 'ClearyDisplay'
 $logFile = Join-Path $logDir 'apply.log'
 $profilePath = Join-Path $logDir 'dim-profile.json'
+$uiSettingsPath = Join-Path $logDir 'ui-settings.json'
 
 function Write-Log([string]$msg) {
   $line = '{0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $msg
@@ -12,12 +13,59 @@ function Write-Log([string]$msg) {
 }
 
 function Get-IsOnAc {
-  $b = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
-  if (-not $b) { return $true }
-  return ([int]$b.BatteryStatus -eq 2)
+  # ACLineStatus: 0=Offline, 1=Online, 255=Unknown
+  # 注意：不要走 WMI (Win32_Battery) 回退——本机 wmiprvse 会被第三方 WMI 提供程序
+  # (Foxit Print-to-Evernote fenvpr_ui.dll) 拖崩，导致查询超时/失败（"断开"根因之一）。
+  # GetSystemPowerStatus 是 kernel32 直调，稳定可靠；失败时按台式机惯例视为接电。
+  try {
+    if (-not ('ClearyPower' -as [type])) {
+      Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class ClearyPower {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct SYSTEM_POWER_STATUS {
+    public byte ACLineStatus;
+    public byte BatteryFlag;
+    public byte BatteryLifePercent;
+    public byte SystemStatusFlag;
+    public int BatteryLifeTime;
+    public int BatteryFullLifeTime;
+  }
+  [DllImport("kernel32.dll")]
+  public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS sps);
+}
+"@
+    }
+    $sps = New-Object ClearyPower+SYSTEM_POWER_STATUS
+    if ([ClearyPower]::GetSystemPowerStatus([ref]$sps)) {
+      if ($sps.ACLineStatus -eq 1) { return $true }
+      if ($sps.ACLineStatus -eq 0) { return $false }
+    }
+  } catch {}
+  return $true
+}
+
+function Get-FontFromRecommend([string]$id) {
+  switch ($id) {
+    'apple'   { return @{ clearType = $true; gamma = 1.15; orientation = 1 } }
+    'lg'      { return @{ clearType = $true; gamma = 1.68; orientation = 1 } }
+    'huawei'  { return @{ clearType = $true; gamma = 1.55; orientation = 1 } }
+    'asus'    { return @{ clearType = $true; gamma = 1.40; orientation = 1 } }
+    'samsung' { return @{ clearType = $true; gamma = 1.50; orientation = 1 } }
+    default   { return @{ clearType = $true; gamma = 1.40; orientation = 1 } }
+  }
 }
 
 if (-not $Force) { Start-Sleep -Seconds 2 }
+
+# 调节窗口打开时不要抢写硬件：否则插电瞬间亮度跳变，且易与 UI 线程 DDC 打架导致假死
+try {
+  if (Get-Process -Name 'ClearyDisplay' -ErrorAction SilentlyContinue) {
+    Write-Log 'Skipped: ClearyDisplay UI is open (no hardware write on power change)'
+    exit 0
+  }
+} catch {}
 
 $onAc = Get-IsOnAc
 $brightness = 90
@@ -49,6 +97,8 @@ public class ClearyDisplayApply {
   [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+  // IntPtr overload: PowerShell turns $null into "" for string params, which breaks adapter enumeration
+  [DllImport("user32.dll", CharSet=CharSet.Unicode, EntryPoint="EnumDisplayDevices")] public static extern bool EnumDisplayDevicesPtr(IntPtr lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(IntPtr hMonitor, ref uint n);
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool GetPhysicalMonitorsFromHMONITOR(IntPtr hMonitor, uint n, [Out] PHYSICAL_MONITOR[] arr);
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool SetMonitorBrightness(IntPtr h, uint v);
@@ -56,6 +106,8 @@ public class ClearyDisplayApply {
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool GetMonitorBrightness(IntPtr h, ref uint min, ref uint cur, ref uint max);
   [DllImport("dxva2.dll", SetLastError=true)] public static extern bool DestroyPhysicalMonitors(uint n, [In] PHYSICAL_MONITOR[] arr);
   [DllImport("user32.dll")] public static extern bool EnumDisplayMonitors(IntPtr a, IntPtr b, MonitorEnumProc c, IntPtr d);
+  [DllImport("user32.dll", SetLastError=true)] public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref uint pvParam, uint fWinIni);
+  [DllImport("user32.dll", SetLastError=true)] public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
   public delegate bool MonitorEnumProc(IntPtr h, IntPtr hdc, IntPtr r, IntPtr data);
   [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)]
   public struct PHYSICAL_MONITOR {
@@ -78,6 +130,12 @@ public class ClearyDisplayApply {
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst=128)] public string DeviceKey;
   }
   public const int DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1;
+  public const uint SPI_SETFONTSMOOTHING = 0x004B;
+  public const uint SPI_SETFONTSMOOTHINGTYPE = 0x200B;
+  public const uint SPI_SETFONTSMOOTHINGGAMMA = 0x200D;
+  public const uint SPI_SETFONTSMOOTHINGORIENTATION = 0x2013;
+  public const uint SPIF_UPDATEINIFILE = 0x01;
+  public const uint SPIF_SENDCHANGE = 0x02;
 }
 "@
 }
@@ -99,7 +157,7 @@ $gammaOk = 0
 for ($dev = 0; $dev -lt 16; $dev++) {
   $dd = New-Object ClearyDisplayApply+DISPLAY_DEVICE
   $dd.cb = [Runtime.InteropServices.Marshal]::SizeOf($dd)
-  if (-not [ClearyDisplayApply]::EnumDisplayDevices($null, [uint32]$dev, [ref]$dd, 0)) { break }
+  if (-not [ClearyDisplayApply]::EnumDisplayDevicesPtr([IntPtr]::Zero, [uint32]$dev, [ref]$dd, 0)) { break }
   if (($dd.StateFlags -band [ClearyDisplayApply]::DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) -eq 0) { continue }
   $hdc = [ClearyDisplayApply]::CreateDC('DISPLAY', $dd.DeviceName, $null, [IntPtr]::Zero)
   if ($hdc -eq [IntPtr]::Zero) { continue }
@@ -127,14 +185,23 @@ foreach ($hMon in @($script:hMons)) {
   $n = [uint32]0
   if (-not [ClearyDisplayApply]::GetNumberOfPhysicalMonitorsFromHMONITOR($hMon,[ref]$n) -or $n -eq 0) { continue }
   $arr = New-Object ClearyDisplayApply+PHYSICAL_MONITOR[] $n
-  if (-not [ClearyDisplayApply]::GetPhysicalMonitorsFromHMONITOR($hMon,$n,$arr)) { continue }
+  if (-not [ClearyDisplayApply]::GetPhysicalMonitorsFromHMONITOR($hMon,$n,$arr)) {
+    Write-Log ('DDC open failed for one monitor (err=' + [Runtime.InteropServices.Marshal]::GetLastWin32Error() + ')')
+    continue
+  }
   try {
     for ($i = 0; $i -lt $n; $i++) {
       $ph = $arr[$i].hPhysicalMonitor
-      [void][ClearyDisplayApply]::SetMonitorBrightness($ph, [uint32]$brightness)
-      [void][ClearyDisplayApply]::SetMonitorContrast($ph, [uint32]$contrast)
+      # DDC/CI over I2C is slow: give the monitor settle time, retry once on failure
+      $okB = [ClearyDisplayApply]::SetMonitorBrightness($ph, [uint32]$brightness)
+      if (-not $okB) { Start-Sleep -Milliseconds 120; $okB = [ClearyDisplayApply]::SetMonitorBrightness($ph, [uint32]$brightness) }
+      Start-Sleep -Milliseconds 50
+      $okC = [ClearyDisplayApply]::SetMonitorContrast($ph, [uint32]$contrast)
+      if (-not $okC) { Start-Sleep -Milliseconds 120; $okC = [ClearyDisplayApply]::SetMonitorContrast($ph, [uint32]$contrast) }
+      Start-Sleep -Milliseconds 50
       $min=0;$c=0;$max=0
       if ([ClearyDisplayApply]::GetMonitorBrightness($ph,[ref]$min,[ref]$c,[ref]$max)) { $cur = [int]$c }
+      if (-not ($okB -or $okC)) { Write-Log ('DDC write unresponsive on physical monitor ' + $i) }
       $ddcCount++
     }
   } finally {
@@ -148,5 +215,46 @@ try {
   powercfg /SETACTIVE SCHEME_CURRENT | Out-Null
 } catch {}
 
-Write-Log ("Applied ALL displays onAc={0} bright={1} contrast={2} readback={3} gamma={4} scale={5} gammaDevs={6} ddc={7}" -f $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount)
+# Restore ClearType / font gamma (registry usually persists; SPI refresh helps after logon)
+$fontClear = $true
+$fontGamma = 1.4
+$fontOri = 1
+try {
+  if (Test-Path $uiSettingsPath) {
+    $ui = Get-Content $uiSettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($ui.fontApplied) {
+      if ($null -ne $ui.fontApplied.clearType) { $fontClear = [bool]$ui.fontApplied.clearType }
+      if ($null -ne $ui.fontApplied.gamma) { $fontGamma = [double]$ui.fontApplied.gamma }
+      if ($null -ne $ui.fontApplied.orientation) { $fontOri = [int]$ui.fontApplied.orientation }
+    } elseif ($ui.fontRecommend) {
+      $ff = Get-FontFromRecommend ([string]$ui.fontRecommend)
+      $fontClear = [bool]$ff.clearType
+      $fontGamma = [double]$ff.gamma
+      $fontOri = [int]$ff.orientation
+    }
+  }
+} catch {}
+try {
+  $flags = [ClearyDisplayApply]::SPIF_UPDATEINIFILE -bor [ClearyDisplayApply]::SPIF_SENDCHANGE
+  $smooth = if ($fontClear) { [uint32]1 } else { [uint32]0 }
+  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHING, $smooth, [IntPtr]::Zero, $flags)
+  if ($fontClear) {
+    $type = [uint32]2
+    [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGTYPE, 0, [ref]$type, $flags)
+  }
+  $gWant = [int][Math]::Round($fontGamma * 1000)
+  if ($gWant -lt 1000) { $gWant = 1000 }
+  if ($gWant -gt 2200) { $gWant = 2200 }
+  # Skip SPI_SETFONTSMOOTHINGGAMMA — P/Invoke corrupts live contrast on Win11 and breaks Java.
+  $o = [uint32]$fontOri
+  [void][ClearyDisplayApply]::SystemParametersInfo([ClearyDisplayApply]::SPI_SETFONTSMOOTHINGORIENTATION, 0, [ref]$o, $flags)
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothing -Value ($(if($fontClear){'2'}else{'0'}))
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingType -Value ($(if($fontClear){2}else{1})) -Type DWord
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingGamma -Value $gWant -Type DWord
+  Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name FontSmoothingOrientation -Value $fontOri -Type DWord
+} catch {
+  Write-Log ('Font apply fail: ' + $_.Exception.Message)
+}
+
+Write-Log ("Applied ALL displays onAc={0} bright={1} contrast={2} readback={3} gamma={4} scale={5} gammaDevs={6} ddc={7} fontG={8}" -f $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount, $fontGamma)
 exit 0

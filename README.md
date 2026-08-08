@@ -5,9 +5,9 @@ Windows display & font tuner with bilingual UI (中文 / English).
 ## Install (another PC)
 
 1. Download **ClearyDisplay-Setup-*.exe** from [Releases](https://github.com/stormertoolscn/ClearyDisplay/releases).
-2. If Windows shows **SmartScreen** (“Windows protected your PC”):
-   - Click **More info** → **Run anyway**  
-   - Or right‑click the file → **Properties** → check **Unblock** → OK, then run again.
+2. If Windows shows **SmartScreen** ("Windows protected your PC"):
+   - Click **More info** → **Run anyway**
+   - Or right-click the file → **Properties** → check **Unblock** → OK, then run again.
 3. Install finishes to `%LOCALAPPDATA%\ClearyDisplay` (no admin required).
 
 ### Requirements
@@ -25,9 +25,11 @@ You can also run `ClearyDisplay.exe` without the installer (same SmartScreen not
 - Brightness / contrast via DDC/CI where supported
 - Software gamma & scale
 - ClearType controls + system wizard
-- Brand presets: Apple, LG, Huawei, ASUS, Generic
-- AC / battery profiles, named presets
-- Light / Dark / System theme, ZH ↔ EN toggle
+- Windows color calibration launcher
+- Brand presets: Apple, LG, Huawei, ASUS, Samsung, Generic
+- UI themes: GITHUB / Apple / DSA / Chrome, plus Light / Dark / System
+- AC / battery profiles with ACLineStatus-based auto radio sync (does not auto-write screen brightness; click Apply to commit)
+- Named presets; bilingual ZH / EN UI
 
 ## Build from source
 
