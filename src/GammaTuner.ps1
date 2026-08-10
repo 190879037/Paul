@@ -1542,7 +1542,7 @@ $script:loading = $true
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RepeatButton">
-            <Border Background="Transparent" Height="10"/>
+            <Border Background="Transparent" Height="4"/>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
@@ -1554,7 +1554,7 @@ $script:loading = $true
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RepeatButton">
-            <Border Background="{DynamicResource Accent}" CornerRadius="5" Height="10"/>
+            <Border Background="{DynamicResource Accent}" CornerRadius="5" Height="4"/>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
@@ -1594,7 +1594,7 @@ $script:loading = $true
           <ControlTemplate TargetType="Slider">
             <Grid VerticalAlignment="Center" Background="Transparent" MinHeight="32">
               <!-- 装饰轨道不参与命中，否则会挡住拖动 -->
-              <Border Height="10" Background="{DynamicResource TrackBg}" CornerRadius="5"
+              <Border Height="4" Background="{DynamicResource TrackBg}" CornerRadius="5"
                       VerticalAlignment="Center" Margin="11,0" IsHitTestVisible="False"/>
               <Track x:Name="PART_Track" VerticalAlignment="Center">
                 <Track.DecreaseRepeatButton>
@@ -1605,6 +1605,60 @@ $script:loading = $true
                 </Track.Thumb>
                 <Track.IncreaseRepeatButton>
                   <RepeatButton Style="{StaticResource SliderTrackBtn}" Command="Slider.IncreaseLarge"/>
+                </Track.IncreaseRepeatButton>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- 自定义滚动条样式 - 使竖条变细 -->
+    <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+      <Setter Property="Background" Value="#C4C4C6"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="IsTabStop" Value="False"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Thumb">
+            <Border Background="{TemplateBinding Background}" CornerRadius="3" 
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="#A8A8AA"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="6"/>
+      <Setter Property="MinWidth" Value="6"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Grid Background="Transparent">
+              <Track x:Name="PART_Track" IsDirectionReversed="False">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.LineUpCommand" Focusable="False">
+                    <RepeatButton.Template>
+                      <ControlTemplate>
+                        <Border Background="Transparent"/>
+                      </ControlTemplate>
+                    </RepeatButton.Template>
+                  </RepeatButton>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.LineDownCommand" Focusable="False">
+                    <RepeatButton.Template>
+                      <ControlTemplate>
+                        <Border Background="Transparent"/>
+                      </ControlTemplate>
+                    </RepeatButton.Template>
+                  </RepeatButton>
                 </Track.IncreaseRepeatButton>
               </Track>
             </Grid>
@@ -2208,6 +2262,79 @@ $script:loading = $true
                     <TextBlock x:Name="TxtThemeSystemMark" Grid.Column="2" Text="" FontSize="18" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
                   </Grid>
                 </Border>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- 同步时间 -->
+      <TabItem x:Name="TabSync" Header="同步时间">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+          <StackPanel>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock x:Name="TxtTimeZoneTitle" Text="时区" Style="{StaticResource SectionTitle}"/>
+                <TextBlock x:Name="TxtTimeZoneDesc" Text="当前系统时区" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                <TextBlock x:Name="TxtTimeZoneValue" Text="(UTC+08:00) 北京，重庆，香港特别行政区，乌鲁木齐" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,12"/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock x:Name="TxtServerTimeTitle" Text="服务器时间" Style="{StaticResource SectionTitle}"/>
+                <TextBlock x:Name="TxtServerTimeDesc" Text="查询 NTP 服务器获取精确时间，然后同步本地时钟。" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                
+                <TextBlock Text="NTP 服务器" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,6"/>
+                <Grid Margin="0,0,0,12">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBox x:Name="TxtNtpServer" Grid.Column="0" Text="ntp.aliyun.com" Padding="10,8" FontSize="13"/>
+                  <Button x:Name="BtnSyncTime" Grid.Column="2" Style="{StaticResource PrimaryBtn}" Content="查询服务器" MinWidth="100" Padding="16,8"/>
+                </Grid>
+
+                <TextBlock x:Name="TxtNtpHint" Text="提示：首选国内服务器，如遇网络问题可更换。" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="服务器时间" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="TxtServerTimeValue" Text="—" Foreground="{DynamicResource TextPrimary}" FontSize="14" FontWeight="Normal"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Text="时间偏差" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="TxtTimeDiff" Text="—" Foreground="{DynamicResource TextPrimary}" FontSize="14" FontWeight="Normal"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock x:Name="TxtSyncError" Text="" Foreground="#D72C2C" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock x:Name="TxtServerListTitle" Text="常用国内 NTP 服务器" Style="{StaticResource SectionTitle}"/>
+                <TextBlock x:Name="TxtServerListDesc" Text="点击选择或复制服务器地址" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <Button Grid.Row="0" x:Name="BtnNtpTsinghua" Style="{StaticResource GhostBtn}" Content="清华大学 (ntp.tsinghua.edu.cn)" Padding="12,8" Margin="0,0,0,8" HorizontalAlignment="Stretch"/>
+                  <Button Grid.Row="1" x:Name="BtnNtpAliyun" Style="{StaticResource GhostBtn}" Content="阿里云 (ntp.aliyun.com)" Padding="12,8" Margin="0,0,0,8" HorizontalAlignment="Stretch"/>
+                  <Button Grid.Row="2" x:Name="BtnNtpNist" Style="{StaticResource GhostBtn}" Content="中科院 (ntp.ntsc.ac.cn)" Padding="12,8" Margin="0,0,0,8" HorizontalAlignment="Stretch"/>
+                  <Button Grid.Row="3" x:Name="BtnNtpPool" Style="{StaticResource GhostBtn}" Content="NTP Pool (cn.pool.ntp.org)" Padding="12,8" HorizontalAlignment="Stretch"/>
+                </Grid>
               </StackPanel>
             </Border>
           </StackPanel>
@@ -2951,6 +3078,107 @@ if ($BtnApply) {
     }
   })
 }
+
+# 同步时间功能
+function Invoke-NtpSync([string]$server) {
+  $error.Clear()
+  $TxtSyncError.Text = ''
+  $TxtSyncError.Visibility = 'Collapsed'
+  $TxtServerTimeValue.Text = '查询中...'
+  $TxtTimeDiff.Text = '—'
+  
+  try {
+    # 使用 .NET NTP 客户端查询时间
+    $ntpClient = New-Object System.Net.Sockets.UdpClient
+    $ntpClient.Connect($server, 123)
+    
+    # NTP 请求包（RFC 5905）
+    $sendData = New-Object byte[] 48
+    $sendData[0] = 0x1B  # LI=0, VN=3, Mode=3
+    
+    # 发送请求
+    [void]$ntpClient.Send($sendData, 48)
+    
+    # 接收响应
+    $receiveData = $ntpClient.Receive([ref]$null)
+    $ntpClient.Close()
+    
+    if ($receiveData.Count -ge 48) {
+      # 解析 NTP 时间戳（秒数从 1900 年起）
+      # Transmit Timestamp 在字节 40-43
+      $txTsInt = [BitConverter]::ToUInt32($receiveData, 40)
+      if ([BitConverter]::IsLittleEndian) {
+        $txTsInt = [System.Net.IPAddress]::NetworkToHostOrder([int]$txTsInt)
+      }
+      
+      # NTP epoch: 1900-01-01, Unix epoch: 1970-01-01 差 2208988800 秒
+      $ntpEpoch = 2208988800
+      $unixTime = [long]$txTsInt - [long]$ntpEpoch
+      
+      if ($unixTime -gt 0) {
+        $serverTime = [DateTime]::UnixEpoch.AddSeconds($unixTime)
+        $now = [DateTime]::UtcNow
+        $diff = ($serverTime - $now).TotalSeconds
+        
+        $TxtServerTimeValue.Text = $serverTime.ToString('yyyy-MM-dd HH:mm:ss')
+        $TxtTimeDiff.Text = "{0:F1} 秒" -f $diff
+        
+        # 如果偏差超过 1 秒，提示
+        if ([Math]::Abs($diff) -gt 1) {
+          $TxtSyncError.Text = "本地时间与服务器偏差 $([Math]::Abs([int]$diff)) 秒，建议同步。"
+          $TxtSyncError.Visibility = 'Visible'
+        }
+        return $true
+      }
+    }
+  } catch {
+    $err = $_.Exception.Message
+  }
+  
+  $TxtServerTimeValue.Text = '—'
+  $TxtTimeDiff.Text = '—'
+  $TxtSyncError.Text = "查询失败，请检查网络或更换服务器：$err"
+  $TxtSyncError.Visibility = 'Visible'
+  return $false
+}
+
+if ($BtnSyncTime) {
+  $BtnSyncTime.Add_Click({
+    $server = if ($TxtNtpServer) { $TxtNtpServer.Text.Trim() } else { 'ntp.aliyun.com' }
+    if ([string]::IsNullOrWhiteSpace($server)) { $server = 'ntp.aliyun.com' }
+    Invoke-NtpSync $server
+  })
+}
+
+# 国内 NTP 服务器快速选择按钮
+if ($BtnNtpTsinghua) {
+  $BtnNtpTsinghua.Add_Click({
+    if ($TxtNtpServer) { $TxtNtpServer.Text = 'ntp.tsinghua.edu.cn' }
+    if ($BtnSyncTime) { $BtnSyncTime.RaiseEvent([System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Button]::ClickEvent)) }
+  })
+}
+
+if ($BtnNtpAliyun) {
+  $BtnNtpAliyun.Add_Click({
+    if ($TxtNtpServer) { $TxtNtpServer.Text = 'ntp.aliyun.com' }
+    if ($BtnSyncTime) { $BtnSyncTime.RaiseEvent([System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Button]::ClickEvent)) }
+  })
+}
+
+if ($BtnNtpNist) {
+  $BtnNtpNist.Add_Click({
+    if ($TxtNtpServer) { $TxtNtpServer.Text = 'ntp.ntsc.ac.cn' }
+    if ($BtnSyncTime) { $BtnSyncTime.RaiseEvent([System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Button]::ClickEvent)) }
+  })
+}
+
+if ($BtnNtpPool) {
+  $BtnNtpPool.Add_Click({
+    if ($TxtNtpServer) { $TxtNtpServer.Text = 'cn.pool.ntp.org' }
+    if ($BtnSyncTime) { $BtnSyncTime.RaiseEvent([System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Button]::ClickEvent)) }
+  })
+}
+
 
 if ($BtnSaveClose) {
   $BtnSaveClose.Add_Click({

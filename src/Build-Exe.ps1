@@ -30,7 +30,7 @@ ps2exe -inputFile $src -outputFile $outExe -noConsole -sta `
   -description 'Display and font tuner' `
   -company 'ClearyDisplay' `
   -product 'ClearyDisplay' `
-  -version '1.7.13.0'
+  -version '1.8.0.1'
 
 if (-not (Test-Path $outExe)) { throw 'Build failed: exe not created' }
 Copy-Item -Force $outExe $deskExe
