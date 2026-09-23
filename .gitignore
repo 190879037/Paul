@@ -7,3 +7,7 @@ dim-profile.json
 presets.json
 .DS_Store
 Thumbs.db
+
+# --- 本地临时产物（截图 / 探针脚本 / 回卷点 / 测试夹具）---
+# 全部以下划线开头，纯粹是本机构建与冒烟过程的中间物，不进版本库。
+_*

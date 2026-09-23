@@ -1,4 +1,8 @@
 # Build ClearyDisplay.exe + Inno Setup installer
+# NOTE: keep -version in sync with src\Build-Exe.ps1 (the deploy build).
+param(
+  [string]$Version = '1.9.0.0'
+)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -32,7 +36,7 @@ ps2exe -inputFile $src -outputFile $outExe -noConsole -sta `
   -description 'Display and font tuner' `
   -company 'ClearyDisplay' `
   -product 'ClearyDisplay' `
-  -version '1.8.0.1'
+  -version $Version
 
 if (-not (Test-Path $outExe)) { throw 'EXE build failed' }
 

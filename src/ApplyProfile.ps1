@@ -1,15 +1,42 @@
 ﻿# ClearyDisplay - apply AC/Battery profile + font to ALL attached displays (logon / power change)
+#
+# 触发方式：HKCU\...\Run 中的 ClearyDisplayApply -> ApplyProfile.cmd -Force
+#
+# 本脚本与主程序 GammaTuner.ps1 是两条独立链路，但共用同一份配置：
+#   presets.json     命名方案（ac / battery 两套子档位）
+#   env-binds.json   环境绑定（显示器 + 网络 -> 方案名）
+#   dim-profile.json 最后保存的活动档位（环境匹配失败时的回退）
+#
+# 关键约定：环境指纹算法必须与主程序保持一致，否则会出现
+# 「开机套用 A 方案、打开界面又跳成 B 方案」的错位。
+# 差异点：此处改用 EnumDisplayDevices 取显示器 ID，不用 WMI——
+# 本机 wmiprvse 会被第三方 WMI 提供程序拖崩，登录瞬间更不能冒险。
 param([switch]$Force)
 
 $ErrorActionPreference = 'SilentlyContinue'
-$logDir = Join-Path $env:LOCALAPPDATA 'ClearyDisplay'
-$logFile = Join-Path $logDir 'apply.log'
-$profilePath = Join-Path $logDir 'dim-profile.json'
-$uiSettingsPath = Join-Path $logDir 'ui-settings.json'
+$logDir          = Join-Path $env:LOCALAPPDATA 'ClearyDisplay'
+$logFile         = Join-Path $logDir 'apply.log'
+$envLogFile      = Join-Path $logDir 'env-switch.log'
+$profilePath     = Join-Path $logDir 'dim-profile.json'
+$presetsPath     = Join-Path $logDir 'presets.json'
+$envBindsPath    = Join-Path $logDir 'env-binds.json'
+$uiSettingsPath  = Join-Path $logDir 'ui-settings.json'
 
 function Write-Log([string]$msg) {
   $line = '{0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $msg
   Add-Content -Path $logFile -Value $line -Encoding UTF8 -ErrorAction SilentlyContinue
+}
+
+function Write-EnvLog([string]$msg) {
+  # 与主程序共用同一份环境切换审计日志，便于按时间线对照两条链路
+  try {
+    Add-Content -LiteralPath $envLogFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  [开机自启] ' + $msg) -Encoding UTF8
+    $f = Get-Item -LiteralPath $envLogFile -ErrorAction SilentlyContinue
+    if ($f -and $f.Length -gt 200000) {
+      $keep = @(Get-Content -LiteralPath $envLogFile -Encoding UTF8 | Select-Object -Last 800)
+      Set-Content -LiteralPath $envLogFile -Value $keep -Encoding UTF8
+    }
+  } catch {}
 }
 
 function Get-IsOnAc {
@@ -67,25 +94,6 @@ try {
   }
 } catch {}
 
-$onAc = Get-IsOnAc
-$brightness = 90
-$contrast = 50
-$gammaPower = 1.0
-$scale = 1.0
-if (Test-Path $profilePath) {
-  try {
-    $j = Get-Content $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $node = if ($onAc) { $j.ac } else { $j.battery }
-    if (-not $node -and $j.brightness) { $node = $j }
-    if ($node) {
-      if ($null -ne $node.brightness) { $brightness = [int]$node.brightness }
-      if ($null -ne $node.contrast) { $contrast = [int]$node.contrast }
-      if ($null -ne $node.gammaPower) { $gammaPower = [double]$node.gammaPower }
-      if ($null -ne $node.scale) { $scale = [double]$node.scale }
-    }
-  } catch {}
-}
-
 if (-not ([System.Management.Automation.PSTypeName]'ClearyDisplayApply').Type) {
 Add-Type @"
 using System;
@@ -139,6 +147,219 @@ public class ClearyDisplayApply {
 }
 "@
 }
+
+# =====================================================================
+#  环境指纹 —— 与 GammaTuner.ps1 的 Get-EnvDisplays / Get-EnvNetwork 等价
+# =====================================================================
+
+function Get-EnvDisplayId {
+  # 从 MONITOR\IOC9193\{GUID}\0002 里取中间那段（如 IOC9193），
+  # 与主程序用 WmiMonitorID 拼出的 ManufacturerName + ProductCodeID 结果一致。
+  $ids = New-Object System.Collections.ArrayList
+  $lbs = New-Object System.Collections.ArrayList
+  try {
+    for ($dev = 0; $dev -lt 16; $dev++) {
+      $dd = New-Object ClearyDisplayApply+DISPLAY_DEVICE
+      $dd.cb = [Runtime.InteropServices.Marshal]::SizeOf($dd)
+      if (-not [ClearyDisplayApply]::EnumDisplayDevicesPtr([IntPtr]::Zero, [uint32]$dev, [ref]$dd, 0)) { break }
+      if (($dd.StateFlags -band [ClearyDisplayApply]::DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) -eq 0) { continue }
+      for ($m = 0; $m -lt 8; $m++) {
+        $md = New-Object ClearyDisplayApply+DISPLAY_DEVICE
+        $md.cb = [Runtime.InteropServices.Marshal]::SizeOf($md)
+        if (-not [ClearyDisplayApply]::EnumDisplayDevices([string]$dd.DeviceName, [uint32]$m, [ref]$md, 0)) { break }
+        $seg = @(([string]$md.DeviceID) -split '\\')
+        if ($seg.Count -lt 2) { continue }
+        $code = ([string]$seg[1]).Trim()
+        if (-not $code) { continue }
+        [void]$ids.Add($code)
+        $nm = ([string]$md.DeviceString).Trim()
+        [void]$lbs.Add($(if ($nm) { $nm } else { $code }))
+      }
+    }
+  } catch {}
+  $u = @($ids | Sort-Object -Unique)
+  $v = @($lbs | Sort-Object -Unique)
+  return [pscustomobject]@{ key = ($u -join '+'); label = ($v -join ' + '); count = $u.Count }
+}
+
+function Get-EnvNetwork {
+  $o = [ordered]@{ wifi = ''; ipseg = ''; kind = 'none'; label = '' }
+  try {
+    foreach ($ni in [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) {
+      if ($ni.OperationalStatus -ne 'Up') { continue }
+      if ($ni.NetworkInterfaceType -eq 'Loopback') { continue }
+      $ips = @()
+      try {
+        $ips = @($ni.GetIPProperties().UnicastAddresses |
+          Where-Object { $_.Address.AddressFamily -eq 'InterNetwork' } |
+          ForEach-Object { $_.Address.IPAddressToString } |
+          Where-Object { $_ -and ($_ -notlike '169.254.*') })
+      } catch {}
+      if ($ips.Count -eq 0) { continue }
+      $seg = ($ips[0] -split '\.')[0..2] -join '.'
+      if ($ni.NetworkInterfaceType -eq 'Wireless80211') { $o.kind = 'wifi' }
+      elseif ($o.kind -eq 'none') { $o.kind = 'ethernet' }
+      if (-not $o.ipseg) { $o.ipseg = $seg }
+    }
+  } catch {}
+  if ($o.kind -eq 'wifi') {
+    try {
+      $w = (& netsh.exe wlan show interfaces) 2>$null | Out-String
+      foreach ($l in ($w -split "`r?`n")) {
+        if ($l -match '^\s*SSID\s*:\s*(\S.*)$') { $o.wifi = $Matches[1].Trim(); break }
+      }
+    } catch {}
+  }
+  if ($o.wifi) { $o.label = $o.wifi }
+  elseif ($o.ipseg) { $o.label = $(if ($o.kind -eq 'wifi') { 'Wi-Fi ' } else { '有线 ' }) + $o.ipseg + '.x' }
+  return [pscustomobject]$o
+}
+
+function Get-EnvFingerprint {
+  $d = Get-EnvDisplayId
+  $n = Get-EnvNetwork
+  $parts = @()
+  if ($d.key) { $parts += $d.key }
+  if ($n.label) { $parts += $n.label }
+  return [pscustomobject]@{
+    display  = [string]$d.key
+    wifi     = [string]$n.wifi
+    ipseg    = [string]$n.ipseg
+    kind     = [string]$n.kind
+    netLabel = [string]$n.label
+    label    = ($parts -join ' · ')
+  }
+}
+
+function Load-EnvBinds {
+  $d = @{ enabled = $false; autoApply = $true; binds = @() }
+  try {
+    if (Test-Path $envBindsPath) {
+      $j = Get-Content $envBindsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($null -ne $j.enabled)   { $d.enabled   = [bool]$j.enabled }
+      if ($null -ne $j.autoApply) { $d.autoApply = [bool]$j.autoApply }
+      $b = New-Object System.Collections.ArrayList
+      foreach ($x in @($j.binds)) {
+        if (-not $x -or -not $x.preset) { continue }
+        [void]$b.Add([ordered]@{
+          preset  = [string]$x.preset
+          display = [string]$x.display
+          wifi    = [string]$x.wifi
+          ipseg   = [string]$x.ipseg
+          label   = [string]$x.label
+        })
+      }
+      $d.binds = @($b)
+    }
+  } catch {}
+  return $d
+}
+
+function Find-EnvMatch($fp, $binds) {
+  $best = $null; $bestScore = 0
+  foreach ($b in @($binds)) {
+    $score = 0
+    if ($b.display -and $fp.display -and ($b.display -eq $fp.display)) { $score += 2 }
+    if ($b.wifi    -and $fp.wifi    -and ($b.wifi    -eq $fp.wifi))    { $score += 2 }
+    if ($b.ipseg   -and $fp.ipseg   -and ($b.ipseg   -eq $fp.ipseg))   { $score += 1 }
+    if ($score -gt $bestScore) { $bestScore = $score; $best = $b }
+  }
+  if ($best -and $bestScore -ge 2) { return [pscustomobject]@{ Bind = $best; Score = $bestScore } }
+  return $null
+}
+
+# =====================================================================
+#  决定用哪一组档位：环境方案优先，失败回退 dim-profile.json
+# =====================================================================
+
+$onAc = Get-IsOnAc
+$sub  = $(if ($onAc) { 'ac' } else { 'battery' })
+$srcName   = 'dim-profile.json'
+$srcDetail = '上次保存的档位'
+$node      = $null
+$matchedPreset = ''
+
+try {
+  $eb = Load-EnvBinds
+  if ($eb.enabled -and $eb.autoApply -and (@($eb.binds).Count -gt 0)) {
+    $fp = Get-EnvFingerprint
+    $m = Find-EnvMatch $fp $eb.binds
+    if ($m) {
+      $pn = [string]$m.Bind.preset
+      $presets = $null
+      if (Test-Path $presetsPath) {
+        try { $presets = Get-Content $presetsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+      }
+      $p = $null
+      if ($presets) {
+        foreach ($prop in @($presets.PSObject.Properties)) {
+          if ([string]$prop.Name -eq $pn) { $p = $prop.Value; break }
+        }
+      }
+      if ($p -and ($p.ac -or $p.battery)) {
+        $node = $(if ($onAc) { $p.ac } else { $p.battery })
+        if (-not $node) { $node = $(if ($onAc) { $p.battery } else { $p.ac }) }
+        $matchedPreset = $pn
+        $srcName   = '环境方案「' + $pn + '」'
+        $srcDetail = '匹配分 ' + $m.Score
+        Write-EnvLog ('套用方案「' + $pn + '」　匹配分 ' + $m.Score + '　子档位 ' + $sub + '　指纹：' + $fp.label + '　绑定标签：' + $m.Bind.label)
+      } else {
+        Write-EnvLog ('匹配到「' + $pn + '」但 presets.json 中无该方案，回退 dim-profile.json　指纹：' + $fp.label)
+      }
+    } else {
+      Write-EnvLog ('未匹配到任何环境方案，回退 dim-profile.json　当前指纹：' + $fp.label)
+    }
+  }
+} catch {
+  Write-EnvLog ('环境匹配异常，回退 dim-profile.json：' + $_.Exception.Message)
+}
+
+$brightness = 90
+$contrast   = 50
+$gammaPower = 1.0
+$scale      = 1.0
+
+if ($node) {
+  if ($null -ne $node.brightness) { $brightness = [int]$node.brightness }
+  if ($null -ne $node.contrast)   { $contrast   = [int]$node.contrast }
+  if ($null -ne $node.gammaPower) { $gammaPower = [double]$node.gammaPower }
+  if ($null -ne $node.scale)      { $scale      = [double]$node.scale }
+} elseif (Test-Path $profilePath) {
+  try {
+    $j = Get-Content $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $n2 = $(if ($onAc) { $j.ac } else { $j.battery })
+    if (-not $n2 -and $j.brightness) { $n2 = $j }
+    if ($n2) {
+      if ($null -ne $n2.brightness) { $brightness = [int]$n2.brightness }
+      if ($null -ne $n2.contrast)   { $contrast   = [int]$n2.contrast }
+      if ($null -ne $n2.gammaPower) { $gammaPower = [double]$n2.gammaPower }
+      if ($null -ne $n2.scale)      { $scale      = [double]$n2.scale }
+    }
+  } catch {}
+}
+
+# 用环境方案写屏后，顺手把活动档位同步回 dim-profile.json，
+# 这样下次环境匹配失败时回退到的就是最近一次真实生效的值。
+if ($matchedPreset) {
+  try {
+    $presets2 = Get-Content $presetsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $p2 = $null
+    foreach ($prop in @($presets2.PSObject.Properties)) {
+      if ([string]$prop.Name -eq $matchedPreset) { $p2 = $prop.Value; break }
+    }
+    if ($p2 -and $p2.ac -and $p2.battery) {
+      $obj = [ordered]@{
+        ac      = [ordered]@{ brightness = [int]$p2.ac.brightness;      contrast = [int]$p2.ac.contrast;      gammaPower = [math]::Round([double]$p2.ac.gammaPower,2);      scale = [math]::Round([double]$p2.ac.scale,2) }
+        battery = [ordered]@{ brightness = [int]$p2.battery.brightness; contrast = [int]$p2.battery.contrast; gammaPower = [math]::Round([double]$p2.battery.gammaPower,2); scale = [math]::Round([double]$p2.battery.scale,2) }
+      }
+      ($obj | ConvertTo-Json -Depth 5) | Set-Content -LiteralPath $profilePath -Encoding UTF8
+    }
+  } catch {}
+}
+
+# =====================================================================
+#  写硬件：软件伽马 -> DDC/CI 亮度对比度 -> 电源方案 -> ClearType
+# =====================================================================
 
 $ramp = New-Object ClearyDisplayApply+RAMP
 $ramp.Red = New-Object 'System.UInt16[]' 256
@@ -256,5 +477,5 @@ try {
   Write-Log ('Font apply fail: ' + $_.Exception.Message)
 }
 
-Write-Log ("Applied ALL displays onAc={0} bright={1} contrast={2} readback={3} gamma={4} scale={5} gammaDevs={6} ddc={7} fontG={8}" -f $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount, $fontGamma)
+Write-Log ("Applied ALL displays src={0} ({1}) sub={2} onAc={3} bright={4} contrast={5} readback={6} gamma={7} scale={8} gammaDevs={9} ddc={10} fontG={11}" -f $srcName, $srcDetail, $sub, $onAc, $brightness, $contrast, $cur, $gammaPower, $scale, $gammaOk, $ddcCount, $fontGamma)
 exit 0
