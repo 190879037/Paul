@@ -1,6 +1,6 @@
 ; ClearyDisplay - Inno Setup installer (ASCII-safe; avoid codepage issues)
 #define MyAppName "ClearyDisplay"
-#define MyAppVersion "1.8.4.0"
+#define MyAppVersion "1.9.4.3"
 #define MyAppPublisher "ClearyDisplay"
 #define MyAppURL "https://github.com/stormertoolscn/ClearyDisplay"
 #define MyAppExeName "ClearyDisplay.exe"
@@ -28,7 +28,7 @@ PrivilegesRequired=lowest
 MinVersion=10.0
 ArchitecturesAllowed=x86 x64compatible arm64
 ArchitecturesInstallIn64BitMode=x64compatible arm64
-VersionInfoVersion=1.8.4.0
+VersionInfoVersion=1.9.4.3
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Display and font tuner (ZH/EN)
 VersionInfoProductName={#MyAppName}
