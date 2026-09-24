@@ -4005,25 +4005,65 @@ function ConvertFrom-AmountText {
   return $v
 }
 
+# 币种 → 英文大写里的主单位 / 辅单位。
+# · 主单位一律用**固定复数**形式（金额是 1 也写 US DOLLARS）—— 这是外贸单证的通行写法，
+#   不随数额变单复数，也就不会出现 "ONE US DOLLAR" 这种单证上很少见的形状。
+# · Sub 为空串表示该币种没有辅币（日元），小数部分直接四舍五入进整数。
+# · 没登记的币种**不猜单词**，直接把代码本身当主单位、辅单位退回 CENTS，
+#   宁可露出 'ABC' 也不凭空编一个可能写错的英文名。
+$script:CUR_WORDS = @{
+  'USD' = @{ Main = 'US DOLLARS';      Sub = 'CENTS' }
+  'EUR' = @{ Main = 'EUROS';           Sub = 'CENTS' }
+  'GBP' = @{ Main = 'POUNDS STERLING'; Sub = 'PENCE' }
+  'JPY' = @{ Main = 'JAPANESE YEN';    Sub = '' }
+}
+
+function Get-CurWords {
+  param([string]$Code)
+  $c = ''
+  if ($Code) { $c = $Code.Trim().ToUpperInvariant() }
+  if ([string]::IsNullOrEmpty($c)) { return @{ Main = 'US DOLLARS'; Sub = 'CENTS' } }
+  if ($script:CUR_WORDS.ContainsKey($c)) { return $script:CUR_WORDS[$c] }
+  return @{ Main = $c; Sub = 'CENTS' }
+}
+
+# 外贸单证风格的金额大写。目标形态（2026-09-24 定稿）：
+#   1.05 USD → SAY TOTAL US DOLLARS ONE AND CENTS FIVE ONLY.
+#   100  USD → SAY TOTAL US DOLLARS ONE HUNDRED ONLY.       无小数就不出现 CENTS
+#   0.05 USD → SAY TOTAL US DOLLARS AND CENTS FIVE ONLY.    整数部分为 0 时整个省略
+#   0    USD → SAY TOTAL US DOLLARS ZERO ONLY.
+# 两个要点：
+# ① 主单位用币种全称（USD → US DOLLARS），不再直接把 'USD' 这三个字母印上去；
+# ② 分位的词序是 **「AND CENTS FIVE」**，不是「AND FIVE CENTS」——
+#    CENTS / PENCE 在这个模板里当标签使，位置在数字之前。
 function ConvertTo-AmountEnglish {
   param([string]$Raw, [string]$Currency = 'USD', [string]$Prefix = 'SAY TOTAL ',
-        [string]$Suffix = ' ONLY.', [bool]$UseAnd = $true,
-        [string]$CentsTemplate = 'AND {cents} CENTS')
+        [string]$Suffix = ' ONLY.', [bool]$UseAnd = $true)
   $val = ConvertFrom-AmountText $Raw
   if ($null -eq $val) { return $null }
   $neg = ($val -lt 0)
   $val = [Math]::Abs($val)
+  $words = Get-CurWords $Currency
   $ip = [long][Math]::Floor($val)
-  $cents = [int][Math]::Round(($val - $ip) * 100.0)
-  if ($cents -eq 100) { $ip = $ip + 1; $cents = 0 }
-  if ($ip -gt 0) { $iw = ConvertTo-IntegerWords $ip $UseAnd } else { $iw = 'ZERO' }
-  if ($neg) { $iw = 'MINUS ' + $iw }
-  $body = $iw
+  if ([string]::IsNullOrEmpty($words.Sub)) {
+    # 无辅币的币种（日元）：不给分位，小数四舍五入进整数
+    $ip = [long][Math]::Round($val, 0, [System.MidpointRounding]::AwayFromZero)
+    $cents = 0
+  } else {
+    $cents = [int][Math]::Round(($val - $ip) * 100.0)
+    if ($cents -eq 100) { $ip = $ip + 1; $cents = 0 }
+  }
+  # 逐段拼，最后用单个空格 join —— 整数部分为 0 时整段跳过，
+  # 所以不会留下 0.05 的 "ZERO" 也不会留下多余空格。
+  $seg = New-Object System.Collections.ArrayList
+  if ($neg) { [void]$seg.Add('MINUS') }
+  if ($ip -gt 0) { [void]$seg.Add((ConvertTo-IntegerWords $ip $UseAnd)) }
+  elseif ($cents -eq 0 -or $neg) { [void]$seg.Add('ZERO') }
   if ($cents -gt 0) {
     $cw = ConvertTo-IntegerWords ([long]$cents) $UseAnd
-    $body = $body + ' ' + $CentsTemplate.Replace('{cents}', $cw)
+    [void]$seg.Add('AND ' + $words.Sub + ' ' + $cw)
   }
-  return ($Prefix + $Currency + ' ' + $body + $Suffix)
+  return ($Prefix + $words.Main + ' ' + ($seg -join ' ') + $Suffix)
 }
 
 # ---------------- 计算器 ----------------
@@ -5850,7 +5890,7 @@ function Paste-FxRate {
           <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource Card}">
                 <StackPanel>
                   <TextBlock Text="数字转英文大写" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="外贸单据风格自动带 AND；金额取自左上计算器读数，货币跟随左上牌价选中的币种。" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                  <TextBlock Text="外贸单据风格，如 SAY TOTAL US DOLLARS ONE AND CENTS FIVE ONLY.（无小数则不出现 CENTS）金额取自上方计算器读数，货币跟随牌价选中的币种。" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,10"/>
                   <TextBlock Text="英文大写" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,6"/>
                   <Border Background="{DynamicResource InputBg}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="10" Padding="14,12">
                     <TextBlock x:Name="TxtCaseOut" Text="&#x2014;" FontFamily="Segoe UI, Microsoft YaHei UI"
