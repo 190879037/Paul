@@ -25,6 +25,11 @@ Safety checks before writing:
 The patch is idempotent: the generated region is delimited by markers and is
 rewritten wholesale on every run, so the .cs files stay the single source of
 truth and GammaTuner.ps1 can be regenerated at any time.
+
+Line endings: GammaTuner.ps1 is stored as pure LF (the repo pins this via
+.gitattributes `*.ps1 -text`, see the LF + BOM rule). This script therefore
+normalises to LF internally and re-emits with the file's *original* dominant
+ending, detected up front. It never silently rewrites the whole file to CRLF.
 """
 import hashlib
 import os
@@ -182,9 +187,18 @@ def main():
     print("== patching GammaTuner.ps1 ==")
     text, raw = read_text(PS1)
     had_bom = raw.startswith(b"\xef\xbb\xbf")
-    if "\r\n" not in text:
-        print("  FAILED: GammaTuner.ps1 is not CRLF")
-        return 1
+
+    # Detect the file's dominant line ending and preserve it. Historically this
+    # script demanded CRLF and force-converted everything to CRLF; the source is
+    # now pure LF, so hard-coding either one is wrong. Normalise to LF for all
+    # string surgery, then re-emit using whichever ending the file already used.
+    crlf = text.count("\r\n")
+    lf_total = text.count("\n")
+    lone_lf = lf_total - crlf
+    eol = "\r\n" if crlf > lone_lf else "\n"
+    eol_name = "CRLF" if eol == "\r\n" else "LF"
+    print("  eol: %s  (crlf=%d  lf=%d)" % (eol_name, crlf, lone_lf))
+
     norm = text.replace("\r\n", "\n")
     region = build_region(combined)
 
@@ -204,7 +218,7 @@ def main():
         print("  no change needed")
         return 0
 
-    out = norm_new.replace("\n", "\r\n").encode("utf-8")
+    out = norm_new.replace("\n", eol).encode("utf-8")
     if had_bom:
         out = b"\xef\xbb\xbf" + out
     with open(PS1, "wb") as fh:
