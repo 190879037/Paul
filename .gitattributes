@@ -1,0 +1,25 @@
+# 统一行尾处理。
+#
+# 背景：本机 system gitconfig 里 core.autocrlf=true，而 GammaTuner.ps1 是
+# 「纯 LF + UTF-8 BOM」的单文件源码真源，对内嵌 C# 内核块（BG_KERNEL_BEGIN/END）
+# 的字节级校验有依赖。若不做约束，别人 clone 时 git 会把 LF 转成 CRLF，
+# 破坏 LF 铁律，也会让内嵌块与 src/_kernel_combined.cs 的逐字节比对失配。
+#
+# 因此对 .ps1 使用 -text：让 git 完全不做行尾转换，仓库里存什么、检出就是什么。
+
+*.ps1 -text
+*.cmd -text
+*.cs  -text
+*.py  -text
+
+# .gitattributes 自身也要 -text：它是在行尾转换生效之前被读取的，
+# 不显式声明的话 git 仍会按 autocrlf 去动它。
+.gitattributes -text
+.gitignore     -text
+
+# 二进制资源明确标记，避免 diff/merge 把它们当文本处理。
+*.exe binary
+*.ico binary
+*.png binary
+*.npy binary
+*.a8  binary

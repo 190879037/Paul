@@ -11,3 +11,11 @@ Thumbs.db
 # --- 本地临时产物（截图 / 探针脚本 / 回卷点 / 测试夹具）---
 # 全部以下划线开头，纯粹是本机构建与冒烟过程的中间物，不进版本库。
 _*
+
+# --- 例外：构建链路必需的生成器（虽同名 _* 但必须入库）---
+# src/_embed_kernel.py 把 bg_filter.cs + bg_trace.cs 拼成内嵌 C# 内核，
+# 是「clone 下来能否重建」的关键一环，不能丢。
+# _kernel_combined.cs 是它的输出，一并入库，方便比对内嵌块有没有漂移。
+# 注意：例外必须写在 _* 之后，gitignore 后写的规则优先级更高。
+!src/_embed_kernel.py
+!src/_kernel_combined.cs
